@@ -1,0 +1,27 @@
+{
+    "name": "zhengyouke/zhengyouke",
+    "type": "library",
+    "description": "zyk common function and extend class.",
+    "homepage": "https://github.com/htxjie/zhengouke",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "zyk",
+            "email": "631372587@qq.com",
+            "homepage": "http://www.zhengyouke.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.2",
+        "ext-curl": "*"
+    },
+    "autoload" : {
+        "psr-4": {
+            "zhengyouke\\": "src/zyk/"
+        },
+        "files": [
+            "src/zyk/function.php"
+        ]
+    }
+}
