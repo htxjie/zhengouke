@@ -10,7 +10,7 @@ namespace zyk;
  * @param $data
  * @return bool|string
  */
-function https_post($url , $data) {
+function zyk_https_post($url , $data) {
     $curl = curl_init();
     curl_setopt($curl, CURLOPT_URL, $url);
     curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, 0);
@@ -37,7 +37,7 @@ function https_post($url , $data) {
  * @param array $data
  * @return bool|string
  */
-function https_get($url, $data = []) {
+function zyk_https_get($url, $data = []) {
     if (!empty($data)) {
         $url = $url . '?' . http_build_query($data);
     }
@@ -54,7 +54,6 @@ function https_get($url, $data = []) {
     $tmpInfo = curl_exec($curl);
     if (curl_errno($curl)) {
         // 错误输出修改，防止在api接口的时候输出内容
-        //\app\common\service\Monolog::error('https_get', '请求：'.$url.', 错误：'.'Errno：' .curl_errno($curl). curl_error($curl), '', [], '');
         return false;
     }
     curl_close($curl);
@@ -70,7 +69,7 @@ function https_get($url, $data = []) {
  *
  * @return bool|string
  */
-function check_card_no($cardNo) {
+function zyk_check_card_no($cardNo) {
     $n = 0;
     $ns = strrev($cardNo); // 倒序
     for ($i=0; $i <strlen($cardNo) ; $i++) {

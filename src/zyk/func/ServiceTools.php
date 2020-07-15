@@ -23,7 +23,7 @@ function zyk_check_emoji($str) {
  * @param $mobile
  * @return bool
  */
-function check_number($mobile) {
+function zyk_check_number($mobile) {
     if(preg_match('/^[0-9]*$/',$mobile))
         return true;
     return false;
@@ -34,7 +34,7 @@ function check_number($mobile) {
  * @param $mobile
  * @return bool
  */
-function check_telephone($mobile) {
+function zyk_check_telephone($mobile) {
     if(preg_match('/^([0-9]{3,4}-)?[0-9]{7,8}$/',$mobile))
         return true;
     return false;
@@ -45,7 +45,7 @@ function check_telephone($mobile) {
  * @param $email
  * @return bool
  */
-function check_email($email) {
+function zyk_check_email($email) {
     if(filter_var($email,FILTER_VALIDATE_EMAIL))
         return true;
     return false;
@@ -57,7 +57,7 @@ function check_email($email) {
  * @param $mobile 需要判断的手机号
  * @return bool
  */
-function check_mobile($mobile) {
+function zyk_check_mobile($mobile) {
     if(preg_match('/1[23456789]\d{9}$/',$mobile))
         return true;
     return false;
