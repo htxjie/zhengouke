@@ -1,6 +1,4 @@
 <?php
-namespace zyk;
-
 
 /**
  * 使用盐值加密

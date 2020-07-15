@@ -1,5 +1,4 @@
 <?php
-namespace zyk;
 
 /**
  * 数组分页

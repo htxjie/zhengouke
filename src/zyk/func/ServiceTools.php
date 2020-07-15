@@ -1,5 +1,4 @@
 <?php
-namespace zyk;
 
 /**
  * 校验字符表情
