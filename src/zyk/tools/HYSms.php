@@ -6,11 +6,25 @@ class HYSms implements BaseInterface {
     protected $account;         //账号
     protected $password;        //密码
     protected $target;        //提交地址
+    protected static $instance;
 
-    function __construct($account, $password, $target) {
-        $this->account = $account;       //用户账号
-        $this->password = $password;     //密码
-        $this->target = $target;       //提交地址
+
+    public function __construct($option) {
+        $this->account = $option['account'] ?? '';       //用户账号
+        $this->password = $option['password'] ?? '';     //密码
+        $this->target = $option['target'] ?? '';       //提交地址
+    }
+
+    /**
+     * 初始化
+     * @param array $options
+     * @return static
+     */
+    public static function instance($options = []) {
+        if (is_null(self::$instance)) {
+            self::$instance = new static($options);
+        }
+        return self::$instance;
     }
 
     /**
@@ -21,28 +35,40 @@ class HYSms implements BaseInterface {
         return ['service_name' => '互忆短信服务', 'service_class' => 'HYSms', 'service_describe' => '系统短信服务', 'author' => 'wxw', 'version' => '1.0'];
     }
 
-    public function sendSMS($mobile,$content,$type = 1,$qt = 1){
+    /**
+     * @发送短信
+     * @param string $mobile 手机号码
+     * @param string $content 短信内容
+     * @return mixed
+     */
+    public function sendSMS($mobile, $content){
         $target = $this->target;
         $msg = $content;
-        $content = rawurlencode($content);
-        $post_data = 'account='.$this->account.'&password='.$this->password.'&mobile='.$mobile.'&content='.$content;
-        //密码可以使用明文密码或使用32位MD5加密
-        $gets =  $this->xml_to_array($this->Post($post_data, $target));
-        if($gets['SubmitResult']['code']==2){
-            /*发送成功，记录短信内容*/
-            $this->log_sms($mobile,$msg);
-            $res['success'] = true;
-            $res['msg'] = "发送成功";
-            return $res;
-        }else{
+        try {
+            $content = rawurlencode($content);
+            $post_data = 'account='.$this->account.'&password='.$this->password.'&mobile='.$mobile.'&content='.$content;
+            //密码可以使用明文密码或使用32位MD5加密
+            $gets =  $this->xml_to_array($this->Post($post_data, $target));
+            if($gets['SubmitResult']['code']==2){
+                /*发送成功，记录短信内容*/
+                $this->log_sms($mobile,$msg);
+                $res['success'] = true;
+                $res['msg'] = "发送成功";
+                return $res;
+            }else{
+                $res['success'] = false;
+                $res['msg'] = $gets['SubmitResult']['msg'];
+                return $res;
+            }
+        } catch (\ErrorException $e) {
             $res['success'] = false;
-            $res['msg'] = $gets['SubmitResult']['msg'];
+            $res['msg'] = $e->getMessage();
             return $res;
         }
 
     }
 
-    public function Post($curlPost,$url){
+    public function Post($curlPost, $url) {
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_URL, $url);
             curl_setopt($curl, CURLOPT_HEADER, false);
@@ -55,7 +81,7 @@ class HYSms implements BaseInterface {
             return $return_str;
     }
 
-    public function xml_to_array($xml){
+    public function xml_to_array($xml) {
         $reg = "/<(\w+)[^>]*>([\\x00-\\xFF]*)<\\/\\1>/";
         if(preg_match_all($reg, $xml, $matches)){
             $count = count($matches[0]);
@@ -71,6 +97,7 @@ class HYSms implements BaseInterface {
         }
         return $arr;
     }
+
     /*获取随机数函数*/
     public function mc_random($length, $char_str = 'abcdefghijklmnopqrstuvwxyz0123456789'){
         $hash = '';

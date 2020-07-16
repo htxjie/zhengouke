@@ -15,6 +15,12 @@
     "require": {
         "php": ">=7.0"
     },
+    "require-dev": {
+        "phpunit/phpunit": "*"
+    },
+    "autoload-dev": {
+        "psr-4": { "zyk\\tests\\": "tests/" }
+    },
     "autoload" : {
         "psr-4": {
             "zhengyouke\\": "src/zyk/"
