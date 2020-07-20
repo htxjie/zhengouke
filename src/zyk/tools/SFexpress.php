@@ -4,12 +4,11 @@ namespace zyk\tools;
 class SFexpress {
 
     private static $_instance = NULL;
-    private static $checkword;
+    private static $checkword;//密钥
     private static $post_url = 'http://bsp-oisp.sf-express.com/bsp-oisp/sfexpressService';
     private $business_number;
     private $cache_set = 1; //  是否开启5分钟的查询缓存
     private $expire = 300;
-    private static $redis = null;
 
 
     public static $finish_code = '80';
@@ -17,8 +16,6 @@ class SFexpress {
     private function __construct($options = []) {
         self::$checkword = $options['check_word'] ?? '';
         $this->business_number = $options['business_number'] ?? '';
-        self::$redis = zyk_redis();
-        $this->expire = $options['expire'] ?? $this->expire;
     }
 
     public static function getInstance() {
@@ -56,19 +53,7 @@ class SFexpress {
      * @return bool|mixed
      */
     public function SFRoute($sf_no) {
-        if ($this->cache_set) {
-            $cache_post = self::$redis->get('SF_no_'. $sf_no);
-            if (!empty($cache_post)) {
-                return $cache_post;
-            } else {
-                $data = $this->queryPostRoute($sf_no);
-                self::$redis->set('SF_no_'.$sf_no, $data);
-                self::$redis->expire('SF_no_'.$sf_no, $this->expire);
-                return $data;
-            }
-        } else {
-            return $this->queryPostRoute($sf_no);
-        }
+        return $this->queryPostRoute($sf_no);
     }
 
     /**
@@ -80,16 +65,7 @@ class SFexpress {
         $order_nno_route = [];
         $query_list = [];
         foreach ($sf_nos as $no) {
-            if ($this->cache_set) {
-                $cache_post = self::$redis->get('SF_no_'. $no);
-                if (!empty($cache_post)) {
-                    $order_nno_route[$no] = $cache_post;
-                } else {
-                    $query_list[] = $no;
-                }
-            } else {
-                $query_list[] = $no;
-            }
+            $query_list[] = $no;
         }
 
         // 批量查询单号

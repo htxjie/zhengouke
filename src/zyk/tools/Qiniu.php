@@ -12,6 +12,35 @@ use Qiniu\Storage\UploadManager;
 
 class Qiniu extends ServiceBase implements BaseInterface {
 
+
+
+    private $auth = null;
+    private $accessKey;//key
+    private $secretKey;//密钥
+    private $file_upload_domain;//访问域名
+    private $bucket;//空间
+    private $upload_url = 'http://up-z0.qiniu.com';//上传地址
+    private $callbackHost;//回调地址
+    private $ObjHost = 'http://rs.qiniu.com/';//
+    private $type = 2;//1-公用空间 2-私有空间
+    private $exit_file_key;
+    private $download_path;
+
+
+    public function __construct($option = []) {
+        $this->accessKey = $option['accessKey'] ?? '';
+        $this->secretKey = $option['secretKey'] ?? '';
+        $this->file_upload_domain = $option['file_upload_domain'] ?? '';
+        $this->bucket = $option['bucket'] ?? '';
+        $this->upload_url = $option['upload_url'] ?? '';
+        $this->callbackHost = $option['callbackHost'] ?? '';
+        $this->ObjHost = $option['ObjHost'] ?? $this->ObjHost;
+        $this->type = $option['type'] ?? $this->type;
+        $this->exit_file_key = $option['exit_file_key'] ?? '';
+        $this->download_path = $option['exit_file_key'] ?? '';
+        $this->auth = new Auth($this->accessKey, $this->secretKey);
+    }
+
     /**
      * 服务基本信息
      * @author lwh 2019-12-03
@@ -28,15 +57,14 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @param $type 类型,默认0,0-表示公有, 1-表示私有
      * @return string
      */
-    public function uploadToken($policy,$type) {
-        if($type == 1) {
-            $auth = new Auth(config('qiniu.accessKey'), config('qiniu.secretKey'));
-            $policy['callbackUrl'] = config('qiniu.callbackHost').rtrim($policy['callbackUrl']);
-            return $auth->uploadToken(config('qiniu.bucket'), null, 108000, $policy);
+    public function uploadToken($policy) {
+        if($this->type == 2) {
+            $policy['callbackUrl'] = $this->callbackHost.rtrim($policy['callbackUrl']);
+            return $this->auth->uploadToken($this->bucket, null, 108000, $policy);
         }else {
-            $auth = new Auth(config('pub_qiniu.accessKey'), config('pub_qiniu.secretKey'));
-            $policy['callbackUrl'] = config('pub_qiniu.callbackHost').rtrim($policy['callbackUrl']);
-            return $auth->uploadToken(config('pub_qiniu.bucket'), null, 108000, $policy);
+
+            $policy['callbackUrl'] = $this->callbackHost.rtrim($policy['callbackUrl']);
+            return $this->auth->uploadToken($this->bucket, null, 108000, $policy);
         }
 
 
@@ -46,8 +74,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * 获取七牛上传token
      */
     public function qiniuToken($policy) {
-        $auth = new Auth(config('qiniu.accessKey'), config('qiniu.secretKey'));
-        return $auth->uploadToken(config('qiniu.bucket'), null, 108000, $policy);
+        return $this->auth->uploadToken($this->bucket, null, 108000, $policy);
     }
 
     /**
@@ -56,7 +83,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @return Auth
      */
     protected function downloadAuth() {
-        return new Auth(config('qiniu.accessKey'), config('qiniu.secretKey'));
+        return $this->auth;
     }
 
     /**
@@ -69,14 +96,13 @@ class Qiniu extends ServiceBase implements BaseInterface {
      */
     public function downloadUrl($type,$fkey, $ext = '') {
         if($type == 1) {
-            $url = config('qiniu.file_upload_domain').$fkey;
+            $url = $this->file_upload_domain.$fkey;
             if(!empty($ext)) {
                 $url .= "?attname=" .$ext;
             }
-            $auth = $this->downloadAuth();
-            return $auth->privateDownloadUrl($url);
+            return $this->auth->privateDownloadUrl($url);
         }else {
-            $url = config('qiniu.file_upload_domain').$fkey;
+            $url = $this->file_upload_domain.$fkey;
             if(!empty($ext)) {
                 $url .= "?attname=" . $ext;
             }
@@ -94,7 +120,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @return string 返回
      */
     public function pubThumbUrl($fkey, $type, $width = 0, $height = 0) {
-        return config('qiniu.file_upload_domain') . $fkey . '?imageView2/' . $type . '/w/' . $width . '/h/' . $height;
+        return $this->file_upload_domain . $fkey . '?imageView2/' . $type . '/w/' . $width . '/h/' . $height;
     }
 
     /**
@@ -107,9 +133,8 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @return string 返回
      */
     public function thumbUrl($fkey, $type, $width = 0, $height = 0) {
-        $url = config('qiniu.file_upload_domain') . $fkey . '?imageView2/' . $type . '/w/' . $width . '/h/' . $height;
-        $auth = $this->downloadAuth();
-        return $auth->privateDownloadUrl($url);
+        $url = $this->file_upload_domain . $fkey . '?imageView2/' . $type . '/w/' . $width . '/h/' . $height;
+        return $this->auth->privateDownloadUrl($url);
     }
 
     /**
@@ -121,17 +146,16 @@ class Qiniu extends ServiceBase implements BaseInterface {
      */
     public function getFileMine($type,$fkey) {
         if($type == 1) {
-            $url  = '/stat/'.\Qiniu\base64_urlSafeEncode(config('qiniu.bucket').':'.$fkey);
-            $auth = $this->downloadAuth()->authorization($url);
+            $url  = '/stat/'.\Qiniu\base64_urlSafeEncode($this->bucket.':'.$fkey);
+            $auth = $this->auth->authorization($url);
             $headers['Authorization'] = $auth['Authorization'];
-            $res  = Client::get(config('qiniu.ObjHost').$url, $headers);
+            $res  = Client::get($this->ObjHost.$url, $headers);
             return $res->json();
         }else {
-            $url  = '/stat/'.\Qiniu\base64_urlSafeEncode(config('pub_qiniu.bucket').':'.$fkey);
-            $auth = new Auth(config('pub_qiniu.accessKey'), config('pub_qiniu.secretKey'));
-            $auth = $auth->authorization($url);
+            $url  = '/stat/'.\Qiniu\base64_urlSafeEncode($this->bucket.':'.$fkey);
+            $auth = $this->auth->authorization($url);
             $headers['Authorization'] = $auth['Authorization'];
-            $res  = Client::get(config('pub_qiniu.ObjHost').$url, $headers);
+            $res  = Client::get($this->ObjHost.$url, $headers);
             return $res->json();
         }
     }
@@ -154,7 +178,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
             }
         }
 
-        $save_path = config('download_path').'file_temp/'.$type.'/';
+        $save_path = $this->download_path.'file_temp/'.$type.'/';
         $file_name = md5($type.$file_key).$ext;
 
         $file_download_path = $this->pubDownloadUrl($file_key, $file_name);
@@ -190,7 +214,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
             }
         }
 
-        $save_path = config('download_path').'file_temp/'.$type.'/';
+        $save_path = $this->download_path.'file_temp/'.$type.'/';
         $file_name = md5($type.$file_key).$ext;
 
         $file_download_path = $this->downloadUrl(1,$file_key, $file_name);
@@ -217,7 +241,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      */
     public function delFile($key) {
         $bucketManager = new BucketManager($this->downloadAuth());
-        return $bucketManager->delete(config('qiniu.bucket'), $key);
+        return $bucketManager->delete($this->bucket, $key);
     }
 
     /**
@@ -229,8 +253,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
     public function uploadPicUrl($pic_url) {
         $upload = new UploadManager();
         $file_name = md5(md5($pic_url).time().rand(1000, 9999));
-        $auth = new Auth(config('pub_qiniu.accessKey'), config('pub_qiniu.secretKey'));
-        $upToken = $auth->uploadToken(config('pub_qiniu.bucket'), null, 3600);
+        $upToken = $this->auth->uploadToken($this->bucket, null, 3600);
         $data = file_get_contents($pic_url);
         if (!$data) {
             return false;
@@ -251,9 +274,8 @@ class Qiniu extends ServiceBase implements BaseInterface {
     public function uploadPicBase64($image_txt) {
         $image = trim($image_txt);
         if ($image) {
-            $auth = new Auth(config('pub_qiniu.accessKey'), config('pub_qiniu.secretKey'));
-            $upToken = $auth->uploadToken(config('pub_qiniu.bucket'), null, 3600);
-            $upUrl = config('pub_qiniu.upload_url') . '/putb64/-1';
+            $upToken = $this->auth->uploadToken($this->bucket, null, 3600);
+            $upUrl = $this->upload_url . '/putb64/-1';
             $qiniu = $this->phpCurlImg($upUrl, $image, $upToken);
             $qiniuArr = json_decode($qiniu,true);
             if(!empty($qiniuArr['key'])) {
@@ -350,7 +372,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
         $size       = intval($imgwidth * 10 / $font_width);
         $water      = 'watermark/2/text/' . $this->base64UrlSafeEncode($watermark) . '/gravity/' . $gravity . '/dissolve/100/font/' . $this->base64_urlSafeEncode('微软雅黑') . '/fontsize/' . $size . '/fill/' . $this->base64_urlSafeEncode('#e7e7e7');
         $image      = 'imageView2/' . $type . '/w/' . $width . '/h/' . $height;
-        $url        = config('qiniu.file_upload_domain') . $fkey . '?' . $water . '|' . $image;
+        $url        = $this->file_upload_domain . $fkey . '?' . $water . '|' . $image;
         return $this->getAuthorization($url);
     }
 
@@ -373,7 +395,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
         $image = $this->downloadUrl(1,$watermark);
         $water = 'watermark/1/image/' . $this->base64UrlSafeEncode($image) . '/dissolve/100/gravity/' . $gravity . '/ws/' . $ws."/wst/1";
         $image = 'imageView2/' . $type . '/w/' . $width . '/h/' . $height;
-        $url   = config('qiniu.file_upload_domain') . $fkey . '?' . $water . '|' . $image;
+        $url   = $this->file_upload_domain . $fkey . '?' . $water . '|' . $image;
         return $this->getAuthorization($url);
     }
 
@@ -391,7 +413,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
         $font_width = mb_strlen($watermark, 'UTF-8');
         $size       = intval($width * 10 / $font_width);
         $water      = 'watermark/2/text/' . $this->base64UrlSafeEncode($watermark) . '/gravity/' . $gravity . '/dissolve/100/font/' . $this->base64_urlSafeEncode('微软雅黑') . '/fontsize/' . $size . '/fill/' . $this->base64_urlSafeEncode('#e7e7e7');
-        $url        = config('qiniu.file_upload_domain') . $fkey . '?' . $water;
+        $url        = $this->file_upload_domain . $fkey . '?' . $water;
         if (!empty($alias)) {
             $alias = urlencode($alias);
             $url   .= "&attname=$alias";
@@ -414,7 +436,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
         $ws    = $width > $height ? 0.7 : 0.5;
         $image = $this->downloadUrl(1,$watermark);
         $water = 'watermark/1/image/' . $this->base64UrlSafeEncode($image) . '/dissolve/100/gravity/' . $gravity . '/ws/' . $ws."/wst/1";
-        $url   = config('qiniu.file_upload_domain') . $fkey . '?' . $water;
+        $url   = $this->file_upload_domain . $fkey . '?' . $water;
         if (!empty($alias)) {
             $alias = urlencode($alias);
             $url   .= "&attname=$alias";
@@ -459,8 +481,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
     }
 
     public function getAuthorization($url) {
-        $auth = new Auth(config('qiniu.accessKey'), config('qiniu.secretKey'));
-        return $auth->privateDownloadUrl($url);
+        return $this->auth->privateDownloadUrl($url);
     }
 
     /**
@@ -471,8 +492,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @return array 返回
      */
     public function getZipAuthorization($url, $body) {
-        $auth          = new Auth(config('qiniu.accessKey'), config('qiniu.secretKey'));
-        $authorization = $auth->authorization($url, $body, 'application/x-www-form-urlencoded');
+        $authorization = $this->auth->authorization($url, $body, 'application/x-www-form-urlencoded');
         if ($authorization['Authorization']) {
             return $authorization['Authorization'];
         }
@@ -489,7 +509,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      */
     public function zipPackSingleFileUrl($fkey, $fname, $alias = '') {
         $file_public_url = $this->downloadUrl(1,$fkey, $fname);
-        $url             = '/url/' . $this->base64UrlSafeEncode($file_public_url);
+        $url = '/url/' . $this->base64UrlSafeEncode($file_public_url);
         if (!empty($alias)) {
             $url .= '/alias/' . $this->base64UrlSafeEncode($alias);
         }
@@ -504,7 +524,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @return string 返回
      */
     public function imageMogrFileSizeLimitUrl($fkey, $size) {
-        $url = config('qiniu.file_upload_domain') . $fkey . '?imageMogr2/size-limit/' . $size;
+        $url = $this->file_upload_domain . $fkey . '?imageMogr2/size-limit/' . $size;
         return $this->getAuthorization($url);
     }
 
@@ -515,17 +535,14 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @return string 返回
      */
     public function pfopZipFileParams($fops) {
-        $bucket        = config('qiniu.bucket');
-        $exit_file_key = config('qiniu.exit_file_key');
         $encoding      = 'utf-8';
         //处理操作系统编码，如果是win则修改成gbk
         $agent = $_SERVER['HTTP_USER_AGENT'];
         if (preg_match('/win/i', $agent)) {
             $encoding = 'gbk';
         }
-
         $fops = 'mkzip/2' . '/encoding/' . $this->base64UrlSafeEncode($encoding) . $fops;
-        return "bucket=$bucket&key=$exit_file_key&fops=$fops";
+        return "bucket=$this->bucket&key=$this->exit_file_key&fops=$fops";
     }
 
     /**
@@ -549,7 +566,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @return string
      */
     public function downloadFileUrl($fkey, $ext = '', $attrNmae = '') {
-        $url = config('qiniu.file_upload_domain') . $fkey;
+        $url = $this->file_upload_domain . $fkey;
         if(!empty($ext)) {
             $url .= empty($attrNmae) ? "?attname=" . md5($fkey). $ext : "?attname=" . $attrNmae . $ext;
         }
@@ -562,7 +579,7 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @param string $fkey 七牛key
      */
     public function getImageInfo($fkey) {
-        $url = config('qiniu.file_upload_domain').config('pub_qiniu.file_upload_domain') . $fkey.'?imageInfo';
+        $url = $this->file_upload_domain.$this->file_upload_domain . $fkey.'?imageInfo';
         $client = Client::get($url);
         return $client->json();
     }
@@ -573,14 +590,12 @@ class Qiniu extends ServiceBase implements BaseInterface {
      * @param string $fkey key值
      */
     public function getFileInfo($fkey) {
-        $entry = config('qiniu.bucket').':'.$fkey;
+        $entry = $this->bucket.':'.$fkey;
         $encodedEntryURI = $this->base64UrlSafeEncode($entry);
         $url = 'https://rs.qbox.me/stat/'.$encodedEntryURI;
-        $auth = new Auth(config('qiniu.accessKey'), config('qiniu.secretKey'));
-        $headers = $auth->authorization($url);
+        $headers = $this->auth->authorization($url);
         $client = Client::get($url, $headers);
         return $client->json();
     }
-
 
 }

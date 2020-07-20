@@ -34,7 +34,7 @@ class Redis
 
 
     private function __construct($config = [] ,$attr=array()) {
-        $this->attr        =    array_merge($this->attr,$attr);
+        $this->attr        =    array_merge($this->attr, $attr);
         $this->redis    =    new \Redis();
         $this->port        =    isset($config['port']) ? $config['port'] : 6379;
         $this->host        =    isset($config['host']) ? $config['host'] : '127.0.0.1';
@@ -46,7 +46,6 @@ class Redis
             $this->auth($config['password']);
             $this->auth    =    $config['password'];
         }
-
         $this->expireTime    =    time() + $this->attr['timeout'];
     }
 
