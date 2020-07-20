@@ -14,7 +14,10 @@
     ],
     "require": {
         "php": ">=7.0",
-        "qiniu/php-sdk" : "*"
+        "qiniu/php-sdk" : "*",
+        "monolog/monolog" : "*",
+        "jpush/jpush" : "*",
+        "elasticsearch/elasticsearch": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "*"
