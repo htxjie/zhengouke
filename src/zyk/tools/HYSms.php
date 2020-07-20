@@ -9,11 +9,14 @@ class HYSms implements BaseInterface {
     protected static $instance;
 
 
-    public function __construct($option) {
+    private function __construct($option) {
         $this->account = $option['account'] ?? '';       //用户账号
         $this->password = $option['password'] ?? '';     //密码
         $this->target = $option['target'] ?? '';       //提交地址
     }
+
+    //私有化克隆
+    private function __clone(){}
 
     /**
      * 初始化
@@ -31,7 +34,6 @@ class HYSms implements BaseInterface {
      * 服务基本信息
      */
     public function serviceInfo(){
-
         return ['service_name' => '互忆短信服务', 'service_class' => 'HYSms', 'service_describe' => '系统短信服务', 'author' => 'wxw', 'version' => '1.0'];
     }
 
@@ -132,5 +134,6 @@ class HYSms implements BaseInterface {
         file_put_contents($logPath, json_encode($data));
     }
 }
+
 
 ?>

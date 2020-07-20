@@ -165,3 +165,20 @@ function real_ip()
 
     return $realip;
 }
+
+/**
+ * redis扩展
+ * @param $config 配置文件扩展
+ */
+function zyk_redis($config = array()) {
+    $config = array_merge($config, config('redis'));
+    $db_id = 0;
+    if (!empty($config['db_id'])) {
+        $db_id = $config['db_id'];
+    }
+    try {
+        return \zyk\tools\Redis::getInstance($config, $db_id);
+    } catch (\ErrorException $e) {
+        throw new \ErrorException('redis连接异常');
+    }
+}

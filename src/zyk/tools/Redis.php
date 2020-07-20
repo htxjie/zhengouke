@@ -16,7 +16,7 @@ class Redis
     private $redis;
     protected $dbId=0;
     protected $auth;
-    static private $_instance=array();
+    static private $_instance = array();
     private  $k;
     //连接属性数组
     protected $attr=array(
@@ -33,8 +33,7 @@ class Redis
     protected $status = 0;
 
 
-    private function __construct($config = [] ,$attr=array())
-    {
+    private function __construct($config = [] ,$attr=array()) {
         $this->attr        =    array_merge($this->attr,$attr);
         $this->redis    =    new \Redis();
         $this->port        =    isset($config['port']) ? $config['port'] : 6379;
